@@ -699,13 +699,14 @@ def visualize_boxes_and_labels_on_image_array(
     track_ids=None,
     use_normalized_coordinates=False,
     max_boxes_to_draw=20,
-    min_score_thresh=.5,
+    min_score_thresh=0.7,
     agnostic_mode=False,
-    line_thickness=4,
+    line_thickness=1,
     groundtruth_box_visualization_color='black',
     skip_scores=False,
     skip_labels=False,
-    skip_track_ids=False):
+    skip_track_ids=False,
+    draw_boxes=False):
   """Overlay labeled boxes on an image with formatted scores and label names.
 
   This function groups boxes that correspond to the same location
@@ -752,6 +753,11 @@ def visualize_boxes_and_labels_on_image_array(
   """
   # Create a display string (and color) for every box location, group any boxes
   # that correspond to the same location.
+  xmaxes = []
+  xmins = []
+  ymaxes = []
+  ymins = []
+
   box_to_display_str_map = collections.defaultdict(list)
   box_to_color_map = collections.defaultdict(str)
   box_to_instance_masks_map = {}
@@ -777,7 +783,7 @@ def visualize_boxes_and_labels_on_image_array(
         display_str = ''
         if not skip_labels:
           if not agnostic_mode:
-            if classes[i] in six.viewkeys(category_index):
+            if classes[i] in category_index.keys():
               class_name = category_index[classes[i]]['name']
             else:
               class_name = 'N/A'
@@ -806,6 +812,10 @@ def visualize_boxes_and_labels_on_image_array(
   # Draw all boxes onto image.
   for box, color in box_to_color_map.items():
     ymin, xmin, ymax, xmax = box
+    xmaxes.append(xmax)
+    xmins.append(xmin)
+    ymaxes.append(ymax)
+    ymins.append(ymin)
     if instance_masks is not None:
       draw_mask_on_image_array(
           image,
@@ -819,16 +829,17 @@ def visualize_boxes_and_labels_on_image_array(
           color='red',
           alpha=1.0
       )
-    draw_bounding_box_on_image_array(
-        image,
-        ymin,
-        xmin,
-        ymax,
-        xmax,
-        color=color,
-        thickness=line_thickness,
-        display_str_list=box_to_display_str_map[box],
-        use_normalized_coordinates=use_normalized_coordinates)
+    if draw_boxes:
+      draw_bounding_box_on_image_array(
+          image,
+          ymin,
+          xmin,
+          ymax,
+          xmax,
+          color=color,
+          thickness=line_thickness,
+          display_str_list=box_to_display_str_map[box],
+          use_normalized_coordinates=use_normalized_coordinates)
     if keypoints is not None:
       draw_keypoints_on_image_array(
           image,
@@ -837,7 +848,7 @@ def visualize_boxes_and_labels_on_image_array(
           radius=line_thickness / 2,
           use_normalized_coordinates=use_normalized_coordinates)
 
-  return image
+  return xmaxes, xmins, ymaxes, ymins
 
 
 def add_cdf_image_summary(values, name):
